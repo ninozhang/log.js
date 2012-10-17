@@ -10,7 +10,7 @@
         return Array.prototype.slice.call(obj);
     }
 
-    function $() {
+    function $(selector) {
 
     }
 
@@ -88,6 +88,13 @@
         this.append.apply(this, arguments);
     }
 
+    function error() {
+        nativeConsole.error.apply(nativeConsole, arguments);
+        arguments = toArray(arguments);
+        arguments.unshift(3);
+        this.append.apply(this, arguments);
+    }
+
 
 
     var Log = function() {
@@ -111,6 +118,9 @@
                 },
                 warn: function() {
                     warn.apply(that, arguments);
+                },
+                error: function() {
+                    error.apply(that, arguments);
                 }
             };
     };
@@ -128,7 +138,10 @@
             'position': 'fixed',
             'opacity': 0.8,
             'color': '#fff',
-            'background-color': '#333'
+            'background-color': '#333',
+            'top': 0,
+            'left': 0,
+            'z-index': 100
         });
         document.body.appendChild(this.el);
     };

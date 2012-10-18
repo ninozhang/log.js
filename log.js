@@ -3,12 +3,27 @@
  */
 (function() {
 
-    var nativeConsole = window.nativeConsole || window.console;
-    window.nativeConsole = nativeConsole;
+    var nativeConsole = window.nativeConsole || (window.nativeConsole = window.console);
 
     function toArray(obj) {
         return Array.prototype.slice.call(obj);
     }
+
+    function extend(obj) {
+        var args = toArray(arguments).slice(1),
+            length = args.length;
+        for (var i = 0; i < length; i++) {
+            var source = args[i];
+            for (var prop in source) {
+                obj[prop] = source[prop];
+            }
+        }
+        return obj;
+    }
+
+    function random() {
+        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+    };
 
     function $(selector) {
 
@@ -28,10 +43,15 @@
         return css;
     }
 
-    function stringifyCSS(css) {
-        var text = '';
+    function toCSS(css) {
+        var text = '',
+            value;
         for(var key in css) {
-            text += key + ':' + css[key] + ';';
+            value = css[key];
+            if (typeof key !== 'undefined' &&
+                (typeof value === 'string' || typeof value === 'number')) {
+                text += key + ':' + css[key] + ';';
+            }
         }
         return text;
     }
@@ -54,14 +74,14 @@
         } else if (typeof property === 'string' &&
             typeof value !== 'undefined') {
             css[property] = value;
-            var text = stringifyCSS(css);
+            var text = toCSS(css);
             target.style.cssText = text;
             return css;
         } else if(typeof property === 'object') {
             for (var key in property) {
                 css[key] = property[key];
             }
-            var text = stringifyCSS(css);
+            var text = toCSS(css);
             target.style.cssText = text;
             return css;
         }
@@ -70,14 +90,14 @@
     function log() {
         nativeConsole.log.apply(nativeConsole, arguments);
         arguments = toArray(arguments);
-        arguments.unshift(2);
+        arguments.unshift(0);
         this.append.apply(this, arguments);
     }
 
     function info() {
         nativeConsole.info.apply(nativeConsole, arguments);
         arguments = toArray(arguments);
-        arguments.unshift(2);
+        arguments.unshift(1);
         this.append.apply(this, arguments);
     }
 
@@ -102,7 +122,43 @@
     };
 
     Log.prototype.defaults = {
+        'levels': ['log', 'info', 'warn', 'error'],
+        'elements': ['container', 'control', 'content', 'status'],
+        'cssTag': '/*log-' + random() + '*/',
+        'cssPrefix': 'log-' + random() + '-',
+        'base': {
+            'font-size': '12px',
+            'color': '#fff',
+        },
+        'container': {
+            'position': 'fixed',
+            'opacity': 0.8,
+            'background-color': '#333',
+            'top': 0,
+            'left': 0,
+            'z-index': 999
+        },
+        'control': {
 
+        },
+        'content': {
+
+        },
+        'status': {
+
+        },
+        'log': {
+
+        },
+        'info': {
+            'color': '#00d8ff',
+        },
+        'warn': {
+            'color': '#f7b71e',
+        },
+        'error': {
+            'color': '#ff1800',
+        }
     };
 
     Log.prototype.init = function(options) {
@@ -123,10 +179,19 @@
                     error.apply(that, arguments);
                 }
             };
+        this.updateStyle();
     };
 
     Log.prototype.config = function(options) {
-
+        if (!options) {
+            return;
+        }
+        for (var key in options) {
+            if (typeof key !== 'undefined') {
+                this.defaults[key] = options[key];
+            }
+        }
+        this.update();
     };
 
     Log.prototype.render = function() {
@@ -134,32 +199,41 @@
             return this.el;
         }
         this.el = document.createElement('div');
-        css(this.el, {
-            'position': 'fixed',
-            'opacity': 0.8,
-            'color': '#fff',
-            'background-color': '#333',
-            'top': 0,
-            'left': 0,
-            'z-index': 100
-        });
+        this.control = document.createElement('div');
+        this.content = document.createElement('div');
+        this.status = document.createElement('div');
+        this.addClass(this.el, 'container');
+        this.addClass(this.control, 'control');
+        this.addClass(this.content, 'content');
+        this.addClass(this.status, 'status');
+        this.el.appendChild(this.control);
+        this.el.appendChild(this.content);
+        this.el.appendChild(this.status);
+        this.update();
         document.body.appendChild(this.el);
+    };
+
+    Log.prototype.update = function() {
+        this.updateStyle();
     };
     
     Log.prototype.append = function() {
         if (!this.el) {
             this.render();
         }
-        var level = arguments[0],
+        var defaults = this.defaults,
+            levels = defaults.levels,
+            level = arguments[0],
             objs = toArray(arguments).slice(1),
             label = document.createElement('div');
-        label.innerHTML = level + ':' + JSON.stringify(objs);
-        this.el.appendChild(label);
+        this.addClass(label, levels[level]);
+        label.innerHTML = JSON.stringify(objs);
+        this.content.appendChild(label);
     };
 
     Log.prototype.clear = function() {
         if (this.el) {
-            this.el.innerHTML = '';
+            this.content.innerHTML = '';
         }
     };
 
@@ -169,5 +243,61 @@
         }
     };
 
+    Log.prototype.updateStyle = function() {
+        var defaults = this.defaults,
+            head = document.getElementsByTagName("head").item(0),
+            styles = document.getElementsByTagName("style"),
+            length = styles.length,
+            style;
+        for (var i = length - 1; i >= 0; i--) {
+            var styleText = styles[i].innerHTML;
+            if (styleText.indexOf(defaults.cssTag) > -1) {
+                style = styles[i];
+                break;
+            }
+        }
+        if (!style) {
+            style = document.createElement('style');
+            style.type = 'text/css'; 
+            head.appendChild(style);
+        }
+        style.innerHTML= this.toStyle();
+    }
+
+    Log.prototype.addClass = function (target, className) {
+        if (target && className) {
+            className = this.defaults.cssPrefix + className;
+            if (target.className.indexOf(className) < 0) {
+                target.className += ' ' + className;
+            }
+        }
+    }
+
+    Log.prototype.removeClass = function (target, className) {
+        if (target && className) {
+            className = this.defaults.cssPrefix + className;
+            target.className = target.className.replace(className, '');
+        }
+    }
+
+    Log.prototype.toStyle = function () {
+        var defaults = this.defaults,
+            prefix = defaults.cssPrefix,
+            levels = defaults.levels,
+            elements = defaults.elements,
+            text = defaults.cssTag,
+            iterator;
+        iterator = function(o) {
+            var css = extend({}, defaults.base, defaults[o]);
+            text += '\n.' + prefix + o + '{' + toCSS(css) + '}';
+        };
+        levels.forEach(iterator);
+        elements.forEach(iterator);
+        return text;
+    }
+
     window.Log = Log;
+    document.addEventListener('DOMContentLoaded', function(){
+        window.log = new Log();
+    }, false);
 })();

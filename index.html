@@ -6,16 +6,19 @@
 <title>log.js</title>
 <script src="log.js"></script>
 <style type="text/css">
+.abc {
+
+}
 </style>
 </head>
 <body>
 <script>
-var log = new Log({
-    
-});
-console.log('sb1');
-console.log('sb2');
-console.log('sb3');
+document.addEventListener('DOMContentLoaded', function(){
+    console.log('log');
+    console.info('info');
+    console.warn('warn');
+    console.error('error');
+}, false);
 </script>
 </body>
 </html>

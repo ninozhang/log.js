@@ -97,34 +97,6 @@
         }
     }
 
-    function log() {
-        nativeConsole.log.apply(nativeConsole, arguments);
-        arguments = toArray(arguments);
-        arguments.unshift(0);
-        this.append.apply(this, arguments);
-    }
-
-    function info() {
-        nativeConsole.info.apply(nativeConsole, arguments);
-        arguments = toArray(arguments);
-        arguments.unshift(1);
-        this.append.apply(this, arguments);
-    }
-
-    function warn() {
-        nativeConsole.warn.apply(nativeConsole, arguments);
-        arguments = toArray(arguments);
-        arguments.unshift(2);
-        this.append.apply(this, arguments);
-    }
-
-    function error() {
-        nativeConsole.error.apply(nativeConsole, arguments);
-        arguments = toArray(arguments);
-        arguments.unshift(3);
-        this.append.apply(this, arguments);
-    }
-
 
 
     var Log = function() {
@@ -175,32 +147,61 @@
             'id': random(4),
             'enable': false,
             'method': 'xhr',
-            'url': ''
+            'url': 'ws://127.0.0.1:8080/logs'
         }
     };
 
     Log.prototype.init = function(options) {
-        this.config(options);
-
         var that = this;
+
         window.console = {
                 log: function() {
-                    log.apply(that, arguments);
+                    that.log.apply(that, arguments);
                 },
                 info: function() {
-                    info.apply(that, arguments);
+                    that.info.apply(that, arguments);
                 },
                 warn: function() {
-                    warn.apply(that, arguments);
+                    that.warn.apply(that, arguments);
                 },
                 error: function() {
-                    error.apply(that, arguments);
+                    that.error.apply(that, arguments);
                 }
             };
-        this.updateStyle();
+
+        this.config(options, true);
+        this.render();
     };
 
-    Log.prototype.config = function(options) {
+    Log.prototype.log = function () {
+        nativeConsole.log.apply(nativeConsole, arguments);
+        arguments = toArray(arguments);
+        arguments.unshift(0);
+        this.append.apply(this, arguments);
+    };
+
+    Log.prototype.info = function () {
+        nativeConsole.info.apply(nativeConsole, arguments);
+        arguments = toArray(arguments);
+        arguments.unshift(1);
+        this.append.apply(this, arguments);
+    };
+
+    Log.prototype.warn = function () {
+        nativeConsole.warn.apply(nativeConsole, arguments);
+        arguments = toArray(arguments);
+        arguments.unshift(2);
+        this.append.apply(this, arguments);
+    };
+
+    Log.prototype.error = function () {
+        nativeConsole.error.apply(nativeConsole, arguments);
+        arguments = toArray(arguments);
+        arguments.unshift(3);
+        this.append.apply(this, arguments);
+    };
+
+    Log.prototype.config = function(options, silent) {
         if (!options) {
             return;
         }
@@ -209,7 +210,9 @@
                 this.defaults[key] = options[key];
             }
         }
-        this.update();
+        if (silent !== true) {
+            this.update();
+        }
     };
 
     Log.prototype.render = function() {
@@ -227,8 +230,8 @@
         this.el.appendChild(this.control);
         this.el.appendChild(this.content);
         this.el.appendChild(this.status);
-        this.update();
         document.body.appendChild(this.el);
+        this.update();
     };
 
     Log.prototype.update = function() {
@@ -266,6 +269,10 @@
         if (this.el) {
             document.body.removeChild(this.el);
         }
+        if (this.socket) {
+            this.socket.close();
+            this.socket = null;
+        }
     };
 
     Log.prototype.updateStyle = function() {
@@ -283,11 +290,11 @@
         }
         if (!style) {
             style = document.createElement('style');
-            style.type = 'text/css'; 
+            style.type = 'text/css';
             head.appendChild(style);
         }
-        style.innerHTML= this.toStyle();
-    }
+        style.innerHTML = this.toStyle();
+    };
 
     Log.prototype.addClass = function (target, className) {
         if (target && className) {
@@ -296,14 +303,14 @@
                 target.className += ' ' + className;
             }
         }
-    }
+    };
 
     Log.prototype.removeClass = function (target, className) {
         if (target && className) {
             className = this.defaults.cssPrefix + className;
             target.className = target.className.replace(className, '');
         }
-    }
+    };
 
     Log.prototype.toStyle = function () {
         var defaults = this.defaults,
@@ -319,25 +326,31 @@
         levels.forEach(iterator);
         elements.forEach(iterator);
         return text;
-    }
+    };
 
     Log.prototype.send = function() {
         var level = arguments[0],
             objs = toArray(arguments).slice(1),
             defaults = this.defaults,
-            remote = this.remote,
+            remote = defaults.remote,
             id = remote.id,
             method = remote.method,
             url = remote.url,
             data = {id: id, level: level},
-            options = {url: url, data: data};
+            dataString = '',
+            options = {url: url};
+            
+        for (var key in data) {
+            dataString += '&' + key + '=' + data[key];
+        }
+        options.data = dataString;
 
-        if (method === 'websocket') {
+        if (method === 'websocket' && WebSocket) {
             this.websocket(options);
         } else {
             this.xhr(options);
         }
-    }
+    };
 
     Log.prototype.xhr = function(options) {
         var url = options.url,
@@ -346,15 +359,19 @@
         if (url.indexOf('?') < 0) {
             url += '?';
         }
-        for (var key in data) {
-            url += '&' + key + '=' + data[key];
-        }
+        url += data;
         request.open('GET', url, false);
         request.send();
-    }
+    };
 
-    Log.prototype.websocket = function() {
-    }
+    Log.prototype.websocket = function(options) {
+        var url = options.url,
+            data = options.data;
+        if (!this.socket) {
+            this.socket = new WebSocket(url, 'echo-protocol');
+        }
+        this.socket.send(data);
+    };
 
     window.Log = Log;
     document.addEventListener('DOMContentLoaded', function(){

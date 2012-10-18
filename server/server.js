@@ -1,21 +1,49 @@
-﻿var http = require("http");
-var url = require("url");
-var router = require("./router");
-var requestHandlers = require("./requestHandlers");
+﻿var http = require('http');
+var url = require('url');
+var fs = require('fs');
+var querystring = require("querystring");
+var WebSocketServer = require('websocket').server;
 
-function start(route, handle) {
-    function onRequest(request, response) {
-        var pathname = url.parse(request.url).pathname;
-        console.log("Request for " + request.url);
-        route(handle, pathname, request, response);
-    }
+var httpServer,
+    wsServer;
 
-    http.createServer(onRequest).listen(6666);
-    console.log("Log Server has started.");
+function logs(request, response) {
+
 }
 
-var handle = {};
-handle["/"] = requestHandlers.index;
-handle["/logs"] = requestHandlers.logs;
+function onRequest(request, response) {
+    console.log('on request:' + request.url);
+    var query = querystring.parse(url.parse(request.url).query),
+        method = query['method'],
+        size = parseInt(query['size']) || 1,
+        json = {};
+    response.writeHead(200, {'Content-Type': 'application/json'});
+    response.write(JSON.stringify(json));
+    response.end();
+}
 
-start(router.route, handle);
+httpServer = http.createServer(onRequest).listen(8080);
+console.log('Log Server has started.');
+
+wsServer = new WebSocketServer({
+    httpServer: httpServer,
+    autoAcceptConnections: false
+});
+
+wsServer.on('request', function(request) {
+    var connection = request.accept('echo-protocol', request.origin);
+    console.log((new Date()) + ' Connection accepted.');
+    connection.on('message', function(message) {
+        if (message.type === 'utf8') {
+            console.log('Received Message: ' + message.utf8Data);
+            connection.sendUTF(message.utf8Data);
+        }
+        else if (message.type === 'binary') {
+            console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
+            connection.sendBytes(message.binaryData);
+        }
+    });
+    connection.on('close', function(reasonCode, description) {
+        console.log((new Date()) + ' Peer ' + connection.remoteAddress + ' disconnected.');
+    });
+});

@@ -1,18 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset=utf-8>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>log.js</title>
-<script src="log.js"></script>
 </head>
 <body>
+<script src="log.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-    console.log('log');
-    console.info('info');
-    console.warn('warn');
-    console.error('error');
+    var log = new Log({
+        'remote': {
+            'enable': true,
+            'method': 'websocket'
+        }
+    });
+    log.log('log');
+    log.info('info');
+    log.warn('warn');
+    log.error('error');
 }, false);
 </script>
 </body>

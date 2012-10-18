@@ -21,8 +21,18 @@
         return obj;
     }
 
-    function random() {
-        return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+    function random(l) {
+        var r, s = '', t;
+        r = function() {
+            return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+        };
+        l && (t = Math.ceil(l / 4));
+        t || (t = 3);
+        while (t > 0) {
+            s += r();
+            t--;
+        }
+        return l ? s.substr(0, l) : s;
     };
 
     function $(selector) {
@@ -139,13 +149,15 @@
             'z-index': 999
         },
         'control': {
-
+            'background-color': '#111',
+            'height': '18px'
         },
         'content': {
 
         },
         'status': {
-
+            'background-color': '#111',
+            'height': '18px'
         },
         'log': {
 
@@ -158,6 +170,12 @@
         },
         'error': {
             'color': '#ff1800',
+        },
+        'remote': {
+            'id': random(4),
+            'enable': false,
+            'method': 'xhr',
+            'url': ''
         }
     };
 
@@ -214,6 +232,9 @@
     };
 
     Log.prototype.update = function() {
+        var defaults = this.defaults,
+            remote = defaults.remote;
+        this.status.innerHTML = remote.id;
         this.updateStyle();
     };
     
@@ -222,6 +243,7 @@
             this.render();
         }
         var defaults = this.defaults,
+            remote = defaults.remote,
             levels = defaults.levels,
             level = arguments[0],
             objs = toArray(arguments).slice(1),
@@ -229,6 +251,9 @@
         this.addClass(label, levels[level]);
         label.innerHTML = JSON.stringify(objs);
         this.content.appendChild(label);
+        if (remote.enable) {
+            this.send.apply(this, arguments);
+        }
     };
 
     Log.prototype.clear = function() {
@@ -294,6 +319,41 @@
         levels.forEach(iterator);
         elements.forEach(iterator);
         return text;
+    }
+
+    Log.prototype.send = function() {
+        var level = arguments[0],
+            objs = toArray(arguments).slice(1),
+            defaults = this.defaults,
+            remote = this.remote,
+            id = remote.id,
+            method = remote.method,
+            url = remote.url,
+            data = {id: id, level: level},
+            options = {url: url, data: data};
+
+        if (method === 'websocket') {
+            this.websocket(options);
+        } else {
+            this.xhr(options);
+        }
+    }
+
+    Log.prototype.xhr = function(options) {
+        var url = options.url,
+            data = options.data,
+            request = new XMLHttpRequest();
+        if (url.indexOf('?') < 0) {
+            url += '?';
+        }
+        for (var key in data) {
+            url += '&' + key + '=' + data[key];
+        }
+        request.open('GET', url, false);
+        request.send();
+    }
+
+    Log.prototype.websocket = function() {
     }
 
     window.Log = Log;

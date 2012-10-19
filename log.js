@@ -4,6 +4,54 @@
 (function() {
     var nativeConsole = window.nativeConsole || (window.nativeConsole = window.console);
 
+    var defaults = {
+        'levels': ['log', 'info', 'warn', 'error'],
+        'elements': ['container', 'control', 'content', 'status'],
+        'cssTag': '',
+        'cssPrefix': '',
+        'base': {
+            'font-size': '12px',
+            'color': '#fff',
+        },
+        'container': {
+            'position': 'fixed',
+            'opacity': 0.8,
+            'background-color': '#333',
+            'top': '0',
+            'left': '0',
+            'z-index': 999
+        },
+        'control': {
+            'background-color': '#111',
+            'height': '18px'
+        },
+        'content': {
+            'max-height': '400px',
+            'overflow': 'scroll-y'
+        },
+        'status': {
+            'background-color': '#111',
+            'height': '18px'
+        },
+        'log': {
+
+        },
+        'info': {
+            'color': '#00d8ff',
+        },
+        'warn': {
+            'color': '#f7b71e',
+        },
+        'error': {
+            'color': '#ff1800',
+        },
+        'remote': {
+            'tag': '',
+            'enable': true,
+            'url': '127.0.0.1:7777'
+        }
+    };
+
     function toArray(obj) {
         return Array.prototype.slice.call(obj);
     }
@@ -15,8 +63,8 @@
             var source = args[i];
             for (var prop in source) {
                 var value = source[prop];
-                if (typeof value === 'object') {
-                    extend(obj[prop], value);
+                if (value && (typeof value === 'object') && !Array.isArray(value)) {
+                    extend(obj[prop] || (obj[prop] = {}), value);
                 } else if (typeof prop !== 'undefined') {
                     obj[prop] = value;
                 }
@@ -37,10 +85,6 @@
             t--;
         }
         return l ? s.substr(0, l) : s;
-    }
-
-    function $(selector) {
-
     }
 
     function parseCSS(text) {
@@ -105,56 +149,15 @@
         this.init.apply(this, arguments);
     };
 
-    Log.prototype.defaults = {
-        'levels': ['log', 'info', 'warn', 'error'],
-        'elements': ['container', 'control', 'content', 'status'],
-        'cssTag': '/*log-' + random() + '*/',
-        'cssPrefix': 'log-' + random() + '-',
-        'base': {
-            'font-size': '12px',
-            'color': '#fff',
-        },
-        'container': {
-            'position': 'fixed',
-            'opacity': 0.8,
-            'background-color': '#333',
-            'top': 0,
-            'left': 0,
-            'z-index': 999
-        },
-        'control': {
-            'background-color': '#111',
-            'height': '18px'
-        },
-        'content': {
-            'max-height': '400px',
-            'overflow': 'scroll'
-        },
-        'status': {
-            'background-color': '#111',
-            'height': '18px'
-        },
-        'log': {
-
-        },
-        'info': {
-            'color': '#00d8ff',
-        },
-        'warn': {
-            'color': '#f7b71e',
-        },
-        'error': {
-            'color': '#ff1800',
-        },
-        'remote': {
-            'tag': random(4),
-            'enable': true,
-            'url': '127.0.0.1:7777'
-        }
-    };
-
-    Log.prototype.init = function(options) {nativeConsole.log('init');
-        var that = this;
+    Log.prototype.init = function(options) {
+        var that = this,
+            initOptions = {
+                cssTag: '/*log-' + random() + '*/',
+                cssPrefix: 'log-' + random() + '-',
+                remote: {
+                    tag: random(4)
+                }
+            };
 
         window.console = {
                 log: function() {
@@ -171,7 +174,7 @@
                 }
             };
 
-        this.config(options, true);
+        this.defaults = extend({}, defaults, initOptions, options);
         this.render();
     };
 
@@ -325,7 +328,7 @@
         }
     };
 
-    Log.prototype.toStyle = function () {
+    Log.prototype.toStyle = function () {nativeConsole.log(this);
         var defaults = this.defaults,
             prefix = defaults.cssPrefix,
             levels = defaults.levels,

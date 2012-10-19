@@ -2,7 +2,6 @@
  * log.js
  */
 (function() {
-
     var nativeConsole = window.nativeConsole || (window.nativeConsole = window.console);
 
     function toArray(obj) {
@@ -38,7 +37,7 @@
             t--;
         }
         return l ? s.substr(0, l) : s;
-    };
+    }
 
     function $(selector) {
 
@@ -102,8 +101,6 @@
         }
     }
 
-
-
     var Log = function() {
         this.init.apply(this, arguments);
     };
@@ -130,7 +127,8 @@
             'height': '18px'
         },
         'content': {
-
+            'max-height': '400px',
+            'overflow': 'scroll'
         },
         'status': {
             'background-color': '#111',
@@ -150,12 +148,12 @@
         },
         'remote': {
             'tag': random(4),
-            'enable': false,
+            'enable': true,
             'url': '127.0.0.1:7777'
         }
     };
 
-    Log.prototype.init = function(options) {
+    Log.prototype.init = function(options) {nativeConsole.log('init');
         var that = this;
 
         window.console = {
@@ -257,6 +255,7 @@
         if (remote.enable) {
             this.send.apply(this, arguments);
         }
+        this.content.scrollTop = this.content.scrollHeight;
     };
 
     Log.prototype.clear = function() {
@@ -294,6 +293,20 @@
             head.appendChild(style);
         }
         style.innerHTML = this.toStyle();
+    };
+
+    Log.prototype.controlHeight = function() {
+        var defaults = this.defaults,
+            control = defaults.control,
+            height = control.height;
+        return parseInt(height.substr(0, height.length - 2));
+    };
+
+    Log.prototype.statusHeight = function() {
+        var defaults = this.defaults,
+            status = defaults.control,
+            height = status.height;
+        return parseInt(height.substr(0, height.length - 2));
     };
 
     Log.prototype.addClass = function (target, className) {
@@ -407,7 +420,9 @@
     };
 
     window.Log = Log;
-    document.addEventListener('DOMContentLoaded', function(){
-        window.log = new Log();
+    document.addEventListener('DOMContentLoaded', function() {
+        if (autoLog !== false) {
+            window.log = new Log();
+        }
     }, false);
 })();

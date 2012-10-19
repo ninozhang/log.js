@@ -10,11 +10,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     var levels = ['log', 'info', 'warn', 'error'],
-        log = new Log({
-        'remote': {
-            'enable': true
-        }
-    });
+        log = new Log();
     setInterval(function() {
         var level = levels[Math.floor(Math.random() * 3)],
             fn = log[level];

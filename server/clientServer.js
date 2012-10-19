@@ -43,8 +43,12 @@ function onClose(reasonCode, description) {
 }
 
 function onRequest(request, response) {
-    var path = request.resourceURL.path;
     var connection = request.accept('client-protocol', request.origin);
+    var path = request.resourceURL.path;
+    if (path.length > 1 &&
+        (path.lastIndexOf('/') === path.length - 1)) {
+        path = path.substr(0, path.length - 1);
+    }
     if (!clients[path]) {
         clients[path] = [];
     }

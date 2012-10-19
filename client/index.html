@@ -5,17 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Log Monitor</title>
 <link rel="stylesheet" type="text/css" href="client.css"></link>
+<style type="text/css">
+body {
+    padding: 0;
+    margin: 0;
+}
+.bg {
+    width: 100%;
+    height: 100%;
+}
+</style>
 </head>
 <body>
-<div id="main" class="main">
+<div class="bg">
+&nbsp;
 </div>
 <script>
-var href = window.location.href,
-    index = href.indexOf('?'),
-    tag = index > 0 ? href.substring(index + 1) : '',
-    url = '127.0.0.1:8080/' + tag;
+var autoLog = false,
+    server = '127.0.0.1:8080/',
+    columns = 2;
 </script>
 <script src="zepto.js"></script>
+<script src="../log.js"></script>
 <script src="client.js"></script>
 </body>
 </html>

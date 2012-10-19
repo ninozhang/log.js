@@ -9,16 +9,17 @@
 <script src="log.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
-    var log = new Log({
+    var levels = ['log', 'info', 'warn', 'error'],
+        log = new Log({
         'remote': {
-            'enable': true,
-            'method': 'websocket'
+            'enable': true
         }
     });
-    log.log('log');
-    log.info('info');
-    log.warn('warn');
-    log.error('error');
+    setInterval(function() {
+        var level = levels[Math.floor(Math.random() * 3)],
+            fn = log[level];
+        fn.call(log, 'tick - ', level, ' - ', {'time': (new Date()).toString()});
+    }, 3000);
 }, false);
 </script>
 </body>

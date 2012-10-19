@@ -14,7 +14,7 @@ function close() {
     }
 }
 
-var socket = new WebSocket(url, 'echo-protocol');
+var socket = new WebSocket('ws://' + url, 'client-protocol');
 
 socket.addEventListener('open', function(event) {
     append('已连接到服务器，等待接收日志');
@@ -25,5 +25,12 @@ socket.addEventListener('close', function(event) {
 });
 
 socket.addEventListener('message', function(event) {
-    append(event.data);
+    var data = JSON.parse(event.data),
+        tag = data.tag,
+        level = data.level,
+        args = data.args,
+        message = '';
+    message += 'tag:' + tag;
+    message += 'level:' + level;
+    append(message);
 });

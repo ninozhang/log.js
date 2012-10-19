@@ -10,7 +10,10 @@
 <div id="main" class="main">
 </div>
 <script>
-var url = 'ws://127.0.0.1:8080';
+var href = window.location.href,
+    index = href.indexOf('?'),
+    tag = index > 0 ? href.substring(index + 1) : '',
+    url = '127.0.0.1:8080/' + tag;
 </script>
 <script src="zepto.js"></script>
 <script src="client.js"></script>

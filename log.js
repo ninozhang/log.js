@@ -15,7 +15,12 @@
         for (var i = 0; i < length; i++) {
             var source = args[i];
             for (var prop in source) {
-                obj[prop] = source[prop];
+                var value = source[prop];
+                if (typeof value === 'object') {
+                    extend(obj[prop], value);
+                } else if (typeof prop !== 'undefined') {
+                    obj[prop] = value;
+                }
             }
         }
         return obj;
@@ -144,10 +149,9 @@
             'color': '#ff1800',
         },
         'remote': {
-            'id': random(4),
+            'tag': random(4),
             'enable': false,
-            'method': 'xhr',
-            'url': 'ws://127.0.0.1:8080/logs'
+            'url': '127.0.0.1:7777'
         }
     };
 
@@ -205,11 +209,7 @@
         if (!options) {
             return;
         }
-        for (var key in options) {
-            if (typeof key !== 'undefined') {
-                this.defaults[key] = options[key];
-            }
-        }
+        extend(this.defaults, options);
         if (silent !== true) {
             this.update();
         }
@@ -237,7 +237,7 @@
     Log.prototype.update = function() {
         var defaults = this.defaults,
             remote = defaults.remote;
-        this.status.innerHTML = remote.id;
+        this.status.innerHTML = remote.tag;
         this.updateStyle();
     };
     
@@ -330,47 +330,80 @@
 
     Log.prototype.send = function() {
         var level = arguments[0],
-            objs = toArray(arguments).slice(1),
+            args = toArray(arguments).slice(1),
             defaults = this.defaults,
             remote = defaults.remote,
-            id = remote.id,
-            method = remote.method,
+            tag = remote.tag,
             url = remote.url,
-            data = {id: id, level: level},
-            dataString = '',
-            options = {url: url};
-            
-        for (var key in data) {
-            dataString += '&' + key + '=' + data[key];
-        }
-        options.data = dataString;
-
-        if (method === 'websocket' && WebSocket) {
-            this.websocket(options);
+            data = {tag: tag, level: level, args: args},
+            message = JSON.stringify(data);
+        if (WebSocket) {
+            this.websocket(message);
         } else {
-            this.xhr(options);
+            this.xhr(message);
         }
     };
 
-    Log.prototype.xhr = function(options) {
-        var url = options.url,
-            data = options.data,
+    Log.prototype.xhr = function(message) {
+        var defaults = this.defaults,
+            remote = defaults.remote,
+            url = remote.url,
+            protocol = 'http://',
             request = new XMLHttpRequest();
+        if (url.indexOf(protocol) < 0) {
+            url = protocol + url;
+        }
         if (url.indexOf('?') < 0) {
             url += '?';
         }
-        url += data;
+        url += '&message=' + message;
         request.open('GET', url, false);
         request.send();
     };
 
-    Log.prototype.websocket = function(options) {
-        var url = options.url,
-            data = options.data;
+    Log.prototype.websocket = function(message) {
+        var that = this,
+            defaults = this.defaults,
+            remote = defaults.remote,
+            url = remote.url,
+            protocol = 'ws://';
         if (!this.socket) {
-            this.socket = new WebSocket(url, 'echo-protocol');
+            if (url.indexOf(protocol) < 0) {
+                url = protocol + url;
+            }
+            var onOpen = function() {
+                    that.socketReady = true;
+                    that.websocket();
+                },
+                onClose = function() {
+                    that.socketReady = false;
+                    that.socket = null;
+                    that.websocket();
+                };
+            this.socket = new WebSocket(url, 'log-protocol');
+            this.socketReady = false;
+            this.socket.addEventListener('open', onOpen);
+            this.socket.addEventListener('error', onClose);
+            this.socket.addEventListener('close', onClose);
         }
-        this.socket.send(data);
+        if (!this.socketReady) {
+            if (!this.socketBuffer) {
+                this.socketBuffer = [];
+            }
+            if (message) {
+                this.socketBuffer.push(message);
+            }
+        } else {
+            var length = this.socketBuffer.length;
+            for (var i = 0; i < length; i++) {
+                var buffer = this.socketBuffer[i];
+                this.socket.send(buffer);
+            }
+            this.socketBuffer = [];
+            if (message) {
+                this.socket.send(message);
+            }
+        }
     };
 
     window.Log = Log;
